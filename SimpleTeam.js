@@ -667,7 +667,16 @@ function entityHurt(mob,source,damage,cause){
 function main()
 {
     readFromFile();
-    logger.info("SimpleTeam loaded.");
+    logger.info("SimpleTeam 已加载，开发者：yqs112358");
+    logger.info("简单的组队游戏插件，有编队名字变色、队内伤害阻止等特性");
+    logger.info("用法： /team create <名字>   创建队伍");
+    logger.info("       /team delete         解散队伍");
+    logger.info("       /team add <玩家>     邀请玩家加入队伍");
+    logger.info("       /team remove <玩家>  将玩家移出队伍");
+    logger.info("       /team removeall      将当前队伍中所有其他人移出");
+    logger.info("       /team list           显示当前队伍中所有玩家");
+    logger.info("       /team showall        显示当前所有的队伍");
+    logger.info("[注] 命令仅OP玩家可用");
 
     // 命令注册
     mc.listen("onServerStarted", () => {
