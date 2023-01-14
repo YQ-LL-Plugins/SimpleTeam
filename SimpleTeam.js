@@ -3,14 +3,62 @@ let teamsMap = new Map();           // team name -> {captains: [], members: []}
 let playerTeamMap = new Map();      // xuid -> team name
 
 
+/////////////////////////////////////// Helper ///////////////////////////////////////
+
 Array.prototype.removeByValue = function (val) {
     for (var i = 0; i < this.length; i++) {
         if (this[i] === val) {
-        this.splice(i, 1);
-        i--;
+            this.splice(i, 1);
+            i--;
         }
     }
     return this;
+}
+
+function mapToObj(m){
+    let res= Object.create(null);
+    for (let[k,v] of m) {
+        res[k] = v;
+    }
+    return res;
+}
+
+function objToMap(obj){
+    let res = new Map();
+    for (let k of Object.keys(obj)) {
+        res.set(k, obj[k]);
+    }
+    return res;
+}
+
+
+/////////////////////////////////////// 持久化 ///////////////////////////////////////
+
+// 保存
+function saveToFile()
+{
+    File.writeTo("./plugins/SimpleTeam/TeamsMap.json", JSON.stringify(mapToObj(teamsMap)));
+    File.writeTo("./plugins/SimpleTeam/PlayerTeamMap.json", JSON.stringify(mapToObj(playerTeamMap)));
+}
+
+// 解析
+function readFromFile()
+{
+    try{
+        if(File.exists("./plugins/SimpleTeam/TeamsMap.json"))
+        {
+            let obj = JSON.parse(File.readFrom("./plugins/SimpleTeam/TeamsMap.json"));
+            teamsMap = objToMap(obj);
+        }
+        if(File.exists("./plugins/SimpleTeam/PlayerTeamMap.json"))
+        {
+            let obj = JSON.parse(File.readFrom("./plugins/SimpleTeam/PlayerTeamMap.json"));
+            playerTeamMap = objToMap(obj);
+        }
+    }
+    catch(err) {
+        logger.error(`[SimpleTeam] Fail to parse data from file: ${err.message}`)
+    }
 }
 
 /////////////////////////////////////// 队伍辅助 ///////////////////////////////////////
@@ -23,6 +71,7 @@ function newTeam_Impl(creatorXuid, teamName)
     {
         teamsMap.set(teamName, {captains: [creatorXuid], members: []});  
         playerTeamMap.set(creatorXuid, teamName);
+        saveToFile();
         return true;
     }
     else
@@ -42,6 +91,7 @@ function deleteTeam_Impl(teamName)
             playerTeamMap.set(xuid, null);
         });
         teamsMap.delete(teamName);
+        saveToFile();
         return true;
     }
     else return null;
@@ -123,6 +173,7 @@ function addMember_Impl(playerXuid, isOP, teamName)
     else
         teamInfo.members.push(playerXuid);
     playerTeamMap.set(playerXuid, teamName);
+    saveToFile();
 }
 
 // 队伍移除成员
@@ -151,6 +202,7 @@ function removeMember_Impl(playerXuid, isOP, teamName)
         teamInfo.members.removeByValue(playerXuid);
     }
     playerTeamMap.set(playerXuid, null);
+    saveToFile();
 }
 
 // 队伍转移成员
@@ -163,7 +215,8 @@ function transMember_Impl(playerXuid, isOP, oldTeam, newTeam)
 // 玩家上线
 function playerOnline_Impl(playerXuid)
 {
-    playerTeamMap.set(playerXuid, null);
+    if(!playerTeamMap.has(playerXuid))
+        playerTeamMap.set(playerXuid, null);
 }
 
 // 玩家下线
@@ -512,6 +565,7 @@ function registerCmd()
 // main
 function main()
 {
+    readFromFile();
     logger.info("SimpleTeam loaded.");
 
     // 命令注册
@@ -524,7 +578,7 @@ function main()
         playerOnline_Impl(player.xuid);
     });
 
-    // 监听上线
+    // 监听下线
     mc.listen("onLeft", player=>{
         playerOffline_Impl(player.xuid);
     });
