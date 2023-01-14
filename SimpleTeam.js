@@ -319,7 +319,9 @@ function addMember(executer, playerAdd, output)
                                 let playerXuid = playerAdd.xuid;
                                 let playerOldTeam = getPlayerTeam_Impl(playerXuid);
                                 forEachTeamMember_Impl(playerOldTeam, xuid => {
-                                    mc.getPlayer(xuid).tell(`[SimpleTeam] 队伍${playerOldTeam}已解散`)
+                                    let pl = mc.getPlayer(xuid);
+                                    if(pl)
+                                        pl.tell(`[SimpleTeam] 队伍${playerOldTeam}已解散`)
                                 });
 
                                 // 转移
@@ -355,7 +357,9 @@ function addMember(executer, playerAdd, output)
                             let playerXuid = playerAdd.xuid;
                             let playerOldTeam = getPlayerTeam_Impl(playerXuid);
                             forEachTeamCaptain_Impl(playerOldTeam, xuid => {
-                                mc.getPlayer(xuid).tell(`[SimpleTeam] 玩家${playerAdd.name}已从你的队伍被转移到${newTeam}队伍`);
+                                let pl = mc.getPlayer(xuid);
+                                if(pl)
+                                    Player.tell(`[SimpleTeam] 玩家${playerAdd.name}已从你的队伍被转移到${newTeam}队伍`);
                             });
                             
                             // 转移
@@ -377,7 +381,9 @@ function addMember(executer, playerAdd, output)
             // playerAdd不是OP
             // 提醒旧队队长
             forEachTeamCaptain_Impl(playerOldTeam, xuid => {
-                mc.getPlayer(xuid).tell(`[SimpleTeam] 玩家${playerAdd.name}已从你的队伍被转移到${executerTeam}队伍`);
+                let pl = mc.getPlayer(xuid);
+                if(pl)
+                    pl.tell(`[SimpleTeam] 玩家${playerAdd.name}已从你的队伍被转移到${executerTeam}队伍`);
             });
             
             // 转移
@@ -430,13 +436,17 @@ function removeAllMembers(executer, output)
             {
                 // 同意
                 forEachTeamMember_Impl(teamName, xuid => {
-                    mc.getPlayer(xuid).tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
+                    let pl = mc.getPlayer(xuid);
+                    if(pl)
+                        pl.tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
                     removeMember_Impl(xuid, false, teamName);
                 });
                 forEachTeamCaptain_Impl(teamName, xuid => {
                     if(xuid == executerXuid)    // 不移除自己
                         return;
-                    mc.getPlayer(xuid).tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
+                    let pl = mc.getPlayer(xuid);
+                    if(pl)
+                        pl.tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
                     removeMember_Impl(xuid, true, teamName);
                 });
                 player.tell("[SimpleTeam] 移除所有其他玩家成功");
@@ -454,10 +464,10 @@ function ShowMembers(executer, output)
 
     let members = ""
     forEachTeamCaptain_Impl(executerTeam, xuid => {
-        members += mc.getPlayer(xuid).realName + ", "
+        members += data.xuid2name(xuid) + ", "
     });
     forEachTeamMember_Impl(executerTeam, xuid => {
-        members += mc.getPlayer(xuid).realName + ", "
+        members += data.xuid2name(xuid) + ", "
     });
     members = members.substring(0, members.length - 2);
     return output.success(`[SimpleTeam] 队伍中的所有成员为： ${members}`);
@@ -523,12 +533,12 @@ function cmdCallback(_cmd, ori, out, res)
         forEachTeam_Impl(team => {
             msg = "[" + team + "]\nCaptains:";
             forEachTeamCaptain_Impl(team, xuid => {
-                msg += mc.getPlayer(xuid).name + ", "
+                msg += data.xuid2name(xuid) + ", "
             });
             msg = msg.substring(0, msg.length - 2);
             msg +="\nMembers:";
             forEachTeamMember_Impl(team, xuid => {
-                msg += mc.getPlayer(xuid).name + ", "
+                msg += data.xuid2name(xuid) + ", "
             });
             msg = msg.substring(0, msg.length - 2);
             ori.player.tell(msg);
