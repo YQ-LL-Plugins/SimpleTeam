@@ -2,8 +2,10 @@
 let teamsMap = new Map();           // team name -> {captains: [], members: []}
 let playerTeamMap = new Map();      // xuid -> team name
 
+const colors = ["§1", "§2", "§3", "§4", "§5", "§6", "§7", "§8", "§9", "§a", "§b", "§c", "§d", "§e"]
 
-/////////////////////////////////////// Helper ///////////////////////////////////////
+
+/////////////////////////////////////// Helpers ///////////////////////////////////////
 
 Array.prototype.removeByValue = function (val) {
     for (var i = 0; i < this.length; i++) {
@@ -13,6 +15,10 @@ Array.prototype.removeByValue = function (val) {
         }
     }
     return this;
+}
+
+function getRandomColor() {
+    return colors[Math.floor(Math.random() * colors.length)];
 }
 
 function mapToObj(m){
@@ -228,6 +234,25 @@ function playerOffline_Impl(playerXuid)
 
 /////////////////////////////////////// 功能函数 ///////////////////////////////////////
 
+// 更改玩家名字颜色为队伍颜色
+function colorPlayerName(xuid)
+{
+    let teamName = getPlayerTeam_Impl(xuid);
+    if(teamName != null)
+    {
+        let color = teamName.substring(2,4);    // eg. $l$3NAME$r
+        let pl = mc.getPlayer(xuid);
+        if(pl)
+            pl.rename("§l" + color + pl.realName + "§r");
+    }
+}
+
+// 恢复玩家名字颜色
+function recoverPlayerName(player)
+{
+    player.rename(player.realName);
+}
+
 // 创建队伍
 function createTeam(creator, teamName, output)
 {
@@ -238,6 +263,7 @@ function createTeam(creator, teamName, output)
     if(nowTeam)
         return output.error(`[SimpleTeam] 创建队伍失败。你已拥有队伍： ${nowTeam}`);
     
+    teamName = "§l" + getRandomColor() + teamName + "§r";
     newTeam_Impl(creator.xuid, teamName);    
     return output.success(`[SimpleTeam] 创建队伍${teamName}成功`);
 }
@@ -252,12 +278,18 @@ function deleteTeam(executer, output)
         forEachTeamCaptain_Impl(teamName, xuid => {
             let pl = mc.getPlayer(xuid);
             if(pl)
+            {
+                recoverPlayerName(pl);
                 pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
+            }
         });
         forEachTeamMember_Impl(teamName, xuid => {
             let pl = mc.getPlayer(xuid);
             if(pl)
+            {
+                recoverPlayerName(pl);
                 pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
+            }
         });
         deleteTeam_Impl(teamName);
         return output.success("[SimpleTeam] 队伍删除成功");
@@ -288,6 +320,7 @@ function addMember(executer, playerAdd, output)
         addMember_Impl(playerXuid, playerAdd.isOP(), executerTeam);
 
         // 发送结果
+        colorPlayerName(playerXuid);
         playerAdd.tell(`[SimpleTeam] 你已被邀请进入队伍${executerTeam}`);
         let cnt = countTeamMembers_Impl(executerTeam) + countTeamCaptains_Impl(executerTeam);
         return output.success(`[SimpleTeam] 队伍邀请玩家${playerAdd.name}成功\n[SimpleTeam] 现在队伍共拥有${cnt}人`);
@@ -321,13 +354,17 @@ function addMember(executer, playerAdd, output)
                                 forEachTeamMember_Impl(playerOldTeam, xuid => {
                                     let pl = mc.getPlayer(xuid);
                                     if(pl)
-                                        pl.tell(`[SimpleTeam] 队伍${playerOldTeam}已解散`)
+                                    {
+                                        recoverPlayerName(pl);
+                                        pl.tell(`[SimpleTeam] 队伍${playerOldTeam}已解散`);
+                                    }
                                 });
 
                                 // 转移
                                 transMember_Impl(playerXuid, true, playerOldTeam, newTeam);
     
                                 // 发送结果
+                                colorPlayerName(playerXuid);
                                 playerAdd.tell(`[SimpleTeam] 你已被转移到${newTeam}队伍`);
                                 let cnt = countTeamMembers_Impl(newTeam) + countTeamCaptains_Impl(newTeam);
                                 if(asker)
@@ -366,6 +403,7 @@ function addMember(executer, playerAdd, output)
                             transMember_Impl(playerXuid, true, playerOldTeam, newTeam);
 
                             // 发送结果
+                            colorPlayerName(playerXuid);
                             playerAdd.tell(`[SimpleTeam] 你已被转移到${newTeam}队伍`);
                             let cnt = countTeamMembers_Impl(newTeam) + countTeamCaptains_Impl(newTeam);
                             if(asker)
@@ -390,6 +428,7 @@ function addMember(executer, playerAdd, output)
             transMember_Impl(playerXuid, false, playerOldTeam, executerTeam);
 
             // 发送结果
+            colorPlayerName(playerXuid);
             playerAdd.tell(`[SimpleTeam] 你已被转移到${executerTeam}队伍`);
             let cnt = countTeamMembers_Impl(executerTeam) + countTeamCaptains_Impl(executerTeam);
             return output.success(`[SimpleTeam] 队伍增加玩家${playerAdd.name}成功\n[SimpleTeam] 现在队伍共拥有${cnt}人`);
@@ -415,6 +454,8 @@ function removeMember(executer, playerRemove, output)
     // 可以移除
     playerRemove.tell(`[SimpleTeam] 你已被移出队伍${executerTeam}`)
     removeMember_Impl(playerXuid, playerRemove.isOP(), executerTeam);
+
+    recoverPlayerName(playerRemove);
     let cnt = countTeamMembers_Impl(executerTeam) + countTeamCaptains_Impl(executerTeam);
     return output.success(`[SimpleTeam] 移除成功\n[SimpleTeam] 现在队伍剩余${cnt}人`);
 }
@@ -438,7 +479,10 @@ function removeAllMembers(executer, output)
                 forEachTeamMember_Impl(teamName, xuid => {
                     let pl = mc.getPlayer(xuid);
                     if(pl)
+                    {
+                        recoverPlayerName(pl);
                         pl.tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
+                    }
                     removeMember_Impl(xuid, false, teamName);
                 });
                 forEachTeamCaptain_Impl(teamName, xuid => {
@@ -446,7 +490,10 @@ function removeAllMembers(executer, output)
                         return;
                     let pl = mc.getPlayer(xuid);
                     if(pl)
+                    {
+                        recoverPlayerName(pl);
                         pl.tell(`[SimpleTeam] 你已被移出队伍${teamName}`)
+                    }
                     removeMember_Impl(xuid, true, teamName);
                 });
                 player.tell("[SimpleTeam] 移除所有其他玩家成功");
@@ -470,11 +517,11 @@ function ShowMembers(executer, output)
         members += data.xuid2name(xuid) + ", "
     });
     members = members.substring(0, members.length - 2);
-    return output.success(`[SimpleTeam] 队伍中的所有成员为： ${members}`);
+    return output.success(`[SimpleTeam] 队伍${executerTeam}中的所有成员为： ${members}`);
 }
 
 // 显示所有队伍
-function ListAllTeams(output)
+function ShowAllTeams(output)
 {
     let teams = "";
     forEachTeam_Impl(teamName => {
@@ -483,7 +530,7 @@ function ListAllTeams(output)
     teams = teams.substring(0, teams.length - 2);
 
     if(teams != "")
-        return output.success(`[SimpleTeam] 所有的队伍为： ${teams}`);
+        return output.success(`[SimpleTeam] 目前所有的队伍为： ${teams}`);
     else
         return output.success(`[SimpleTeam] 目前没有任何队伍`);
 }
@@ -518,11 +565,11 @@ function cmdCallback(_cmd, ori, out, res)
                 case "removeall":
                     removeAllMembers(ori.player, out);
                     break;
-                case "members":
+                case "list":
                     ShowMembers(ori.player, out);
                     break;
-                case "list":
-                    ListAllTeams(out);
+                case "showall":
+                    ShowAllTeams(out);
                     break;
             }
         // } catch(err) {
@@ -554,7 +601,7 @@ function registerCmd()
     teamCmd.setEnum("CreateAction", ["create"]);
     teamCmd.setEnum("DeleteAction", ["delete", "removeall"]);
     teamCmd.setEnum("MemberAction", ["add", "remove"])
-    teamCmd.setEnum("ListAction", ["list", "members"])
+    teamCmd.setEnum("ListAction", ["list", "showall"])
 
     teamCmd.mandatory("action", ParamType.Enum, "CreateAction", "action1", 1);
     teamCmd.mandatory("action", ParamType.Enum, "DeleteAction", "action2", 1);
@@ -572,6 +619,20 @@ function registerCmd()
     teamCmd.setup();
 }
 
+// 玩家上线
+function playerJoin(player)
+{
+    let xuid = player.xuid;
+    playerOnline_Impl(xuid);
+    colorPlayerName(player.xuid)
+}
+
+// 玩家下线
+function playerLeft(player)
+{
+    playerOffline_Impl(player.xuid);
+}
+
 // main
 function main()
 {
@@ -583,15 +644,9 @@ function main()
         registerCmd();
     });
 
-    // 监听上线
-    mc.listen("onJoin", player=>{
-        playerOnline_Impl(player.xuid);
-    });
-
-    // 监听下线
-    mc.listen("onLeft", player=>{
-        playerOffline_Impl(player.xuid);
-    });
+    // 监听玩家上线下线
+    mc.listen("onJoin", playerJoin);
+    mc.listen("onLeft", playerLeft);
 }
 
 main();
