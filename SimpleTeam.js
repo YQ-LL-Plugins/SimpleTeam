@@ -577,19 +577,19 @@ function cmdCallback(_cmd, ori, out, res)
         // }
 
         // debug
-        forEachTeam_Impl(team => {
-            msg = "[" + team + "]\nCaptains:";
-            forEachTeamCaptain_Impl(team, xuid => {
-                msg += data.xuid2name(xuid) + ", "
-            });
-            msg = msg.substring(0, msg.length - 2);
-            msg +="\nMembers:";
-            forEachTeamMember_Impl(team, xuid => {
-                msg += data.xuid2name(xuid) + ", "
-            });
-            msg = msg.substring(0, msg.length - 2);
-            ori.player.tell(msg);
-        });
+        // forEachTeam_Impl(team => {
+        //     msg = "[" + team + "]\nCaptains:";
+        //     forEachTeamCaptain_Impl(team, xuid => {
+        //         msg += data.xuid2name(xuid) + ", "
+        //     });
+        //     msg = msg.substring(0, msg.length - 2);
+        //     msg +="\nMembers:";
+        //     forEachTeamMember_Impl(team, xuid => {
+        //         msg += data.xuid2name(xuid) + ", "
+        //     });
+        //     msg = msg.substring(0, msg.length - 2);
+        //     ori.player.tell(msg);
+        // });
     }
     return true;
 }
@@ -633,6 +633,36 @@ function playerLeft(player)
     playerOffline_Impl(player.xuid);
 }
 
+// 玩家攻击实体
+function playerAttack(attacker, entity)
+{
+    if(entity.isPlayer())
+    {
+        let attackee = entity.toPlayer();
+        if(getPlayerTeam_Impl(attacker.xuid) == getPlayerTeam_Impl(attackee.xuid))
+        {
+            // 拦截队内伤害
+            attacker.sendText("队内伤害无效", 5);
+            return false;
+        }
+    }
+}
+
+// 实体受伤
+function entityHurt(mob,source,damage,cause){
+    if(mob && source && mob.isPlayer() && source && source.isPlayer())
+    {
+        let attacker = source.toPlayer()
+        let attackee = mob.toPlayer();
+        if(getPlayerTeam_Impl(attacker.xuid) == getPlayerTeam_Impl(attackee.xuid))
+        {
+            // 拦截队内伤害
+            attacker.sendText("队内伤害无效", 5);
+            return false;
+        }
+    }
+}
+
 // main
 function main()
 {
@@ -644,9 +674,11 @@ function main()
         registerCmd();
     });
 
-    // 监听玩家上线下线
+    // 监听玩家行为
     mc.listen("onJoin", playerJoin);
     mc.listen("onLeft", playerLeft);
+    mc.listen("onAttackEntity", playerAttack);
+    mc.listen("onMobHurt", entityHurt);
 }
 
 main();
