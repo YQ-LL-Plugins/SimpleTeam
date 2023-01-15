@@ -265,6 +265,7 @@ function createTeam(creator, teamName, output)
     
     teamName = "§l" + getRandomColor() + teamName + "§r";
     newTeam_Impl(creator.xuid, teamName);    
+    colorPlayerName(creator.xuid);
     return output.success(`[SimpleTeam] 创建队伍${teamName}成功`);
 }
 
