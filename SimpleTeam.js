@@ -561,16 +561,20 @@ function cmdCallback(_cmd, ori, out, res)
                     deleteTeam(ori.player, out);
                     break;
                 case "add":
-                    target = res.player[0];
-                    if(!target)
+                    targets = res.player;
+					targets.removeByValue(ori.player);
+                    if(targets.length == 0)
                         return out.error("[SimpleTeam] 目标玩家不存在！");
-                    addMember(ori.player, target, out);
+					for(var target of targets)
+						addMember(ori.player, target, out);
                     break;
                 case "remove":
-                    target = res.player[0];
-                    if(!target)
+                    targets = res.player;
+					targets.removeByValue(ori.player);
+                    if(targets.length == 0)
                         return out.error("[SimpleTeam] 目标玩家不存在！");
-                    removeMember(ori.player, target, out);
+					for(var target of targets)
+						removeMember(ori.player, target, out);
                     break;
                 case "removeall":
                     removeAllMembers(ori.player, out);
@@ -649,7 +653,9 @@ function playerAttack(attacker, entity)
     if(entity.isPlayer())
     {
         let attackee = entity.toPlayer();
-        if(getPlayerTeam_Impl(attacker.xuid) == getPlayerTeam_Impl(attackee.xuid))
+		let attackerTeam = getPlayerTeam_Impl(attacker.xuid);
+		let attackeeTeam = getPlayerTeam_Impl(attackee.xuid);
+        if(attackerTeam != null && attackerTeam == attackeeTeam)
         {
             // 拦截队内伤害
             attacker.sendText("队内伤害无效", 5);
@@ -664,7 +670,9 @@ function entityHurt(mob,source,damage,cause){
     {
         let attacker = source.toPlayer()
         let attackee = mob.toPlayer();
-        if(getPlayerTeam_Impl(attacker.xuid) == getPlayerTeam_Impl(attackee.xuid))
+        let attackerTeam = getPlayerTeam_Impl(attacker.xuid);
+		let attackeeTeam = getPlayerTeam_Impl(attackee.xuid);
+        if(attackerTeam != null && attackerTeam == attackeeTeam)
         {
             // 拦截队内伤害
             attacker.sendText("队内伤害无效", 5);
@@ -679,7 +687,7 @@ function main()
     readFromFile();
     logger.info("SimpleTeam 已加载，开发者：yqs112358");
     logger.info("简单的组队游戏插件，有编队名字变色、队内伤害阻止等特性");
-    logger.info("用法： /team create <名字>   创建队伍");
+    logger.info("用法： /team create <名字>  创建队伍");
     logger.info("       /team delete         解散队伍");
     logger.info("       /team add <玩家>     邀请玩家加入队伍");
     logger.info("       /team remove <玩家>  将玩家移出队伍");
