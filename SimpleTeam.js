@@ -515,7 +515,7 @@ function removeMember(executer, playerRemove, output)
                         removeMember_Impl(playerXuid, true, playerOldTeam);
 
                         // 发送结果
-                        recoverPlayerName(playerXuid);
+                        recoverPlayerName(executer);
                         executer.tell(`[SimpleTeam] 你已离开队伍${playerOldTeam}`);                    
                     }
                 }
@@ -625,26 +625,30 @@ function cmdCallback(_cmd, ori, out, res)
                     deleteTeam(ori.player, out);
                     break;
                 case "add":
-                    targets = res.player;
-                    if(targets.length == 1 && targets[0].xuid == ori.player.xuid)      
                     {
-					    // 如果add自己，则报错
-                        return output.error("[SimpleTeam] 无法添加到队伍，因为你已经在此队伍中");
+                        targets = res.player;
+                        if(targets.length == 1 && targets[0].xuid == ori.player.xuid)      
+                        {
+                            // 如果add自己，则报错
+                            return output.error("[SimpleTeam] 无法添加到队伍，因为你已经在此队伍中");
+                        }
+                        targets.removeByValue(ori.player);      // 如果使用选择器，移除自己
+                        if(targets.length == 0)
+                            return out.error("[SimpleTeam] 目标玩家不存在！");
+                        for(let target of targets)
+                            addMember(ori.player, target, out);
+                        break;
                     }
-                    targets.removeByValue(ori.player);      // 如果使用选择器，移除自己
-                    if(targets.length == 0)
-                        return out.error("[SimpleTeam] 目标玩家不存在！");
-					for(var target of targets)
-						addMember(ori.player, target, out);
-                    break;
                 case "remove":
-                    targets = res.player;
-                    if(targets.length > 1)                  // 如果使用选择器，移除自己。特殊情况：remove自己
-					    targets.removeByValue(ori.player);
-                    if(targets.length == 0)
-                        return out.error("[SimpleTeam] 目标玩家不存在！");
-					for(var target of targets)
-						removeMember(ori.player, target, out);
+                    {
+                        targets = res.player;
+                        if(targets.length > 1)                  // 如果使用选择器，移除自己。特殊情况：remove自己
+                            targets.removeByValue(ori.player);
+                        if(targets.length == 0)
+                            return out.error("[SimpleTeam] 目标玩家不存在！");
+                        for(let target of targets)
+                            removeMember(ori.player, target, out);
+                    }
                     break;
                 case "removeall":
                     removeAllMembers(ori.player, out);
@@ -732,11 +736,12 @@ function playerAttack(attacker, entity)
             return false;
         }
     }
+    return true;
 }
 
 // 实体受伤
 function entityHurt(mob,source,damage,cause){
-    if(mob && source && mob.isPlayer() && source && source.isPlayer())
+    if(mob && source && mob.isPlayer() && source.isPlayer())
     {
         let attacker = source.toPlayer()
         let attackee = mob.toPlayer();
@@ -749,6 +754,7 @@ function entityHurt(mob,source,damage,cause){
             return false;
         }
     }
+    return true;
 }
 
 // main
