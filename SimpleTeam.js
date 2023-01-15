@@ -620,13 +620,20 @@ function cmdCallback(_cmd, ori, out, res)
             let target = null;
             switch (res.action) {
                 case "create":
+                    if(!ori.player.isOP())
+                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
                     createTeam(ori.player, res.name, out);
                     break;
                 case "delete":
+                    if(!ori.player.isOP())
+                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
                     deleteTeam(ori.player, out);
                     break;
                 case "add":
                     {
+                        if(!ori.player.isOP())
+                            return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+
                         targets = res.player;
                         if(targets.length == 1 && targets[0].xuid == ori.player.xuid)      
                         {
@@ -636,22 +643,29 @@ function cmdCallback(_cmd, ori, out, res)
                         targets.removeByValue(ori.player);      // 如果使用选择器，移除自己
                         if(targets.length == 0)
                             return out.error("[SimpleTeam] 目标玩家不存在！");
+
                         for(let target of targets)
                             addMember(ori.player, target, out);
                         break;
                     }
                 case "remove":
                     {
+                        if(!ori.player.isOP())
+                            return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+
                         targets = res.player;
                         if(targets.length > 1)                  // 如果使用选择器，移除自己。特殊情况：remove自己
                             targets.removeByValue(ori.player);
                         if(targets.length == 0)
                             return out.error("[SimpleTeam] 目标玩家不存在！");
+
                         for(let target of targets)
                             removeMember(ori.player, target, out);
                     }
                     break;
                 case "removeall":
+                    if(!ori.player.isOP())
+                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
                     removeAllMembers(ori.player, out);
                     break;
                 case "list":
@@ -686,7 +700,7 @@ function cmdCallback(_cmd, ori, out, res)
 // 注册命令
 function registerCmd()
 {
-    let teamCmd = mc.newCommand("team", "SimpleTeam plugin", PermType.GameMasters, 0x80);
+    let teamCmd = mc.newCommand("team", "SimpleTeam plugin", PermType.Any, 0x80);
     teamCmd.setEnum("CreateAction", ["create"]);
     teamCmd.setEnum("DeleteAction", ["delete", "removeall"]);
     teamCmd.setEnum("MemberAction", ["add", "remove"])
