@@ -1,3 +1,5 @@
+const _VER = "1.0.0";
+
 // global vars
 let teamsMap = new Map();           // team name -> {captains: [], members: []}
 let playerTeamMap = new Map();      // xuid -> team name
@@ -792,7 +794,7 @@ function entityHurt(mob,source,damage,cause){
 function main()
 {
     readFromFile();
-    logger.info("SimpleTeam 已加载，开发者：yqs112358");
+    logger.info(`SimpleTeam ${_VER} 已加载，开发者：yqs112358`);
     logger.info("简单的组队插件，有编队名字变色、队内伤害阻止等特性");
     logger.info("用法： /team create <名字>  创建队伍");
     logger.info("       /team delete         解散队伍");
