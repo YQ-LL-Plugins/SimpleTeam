@@ -2,7 +2,7 @@
 let teamsMap = new Map();           // team name -> {captains: [], members: []}
 let playerTeamMap = new Map();      // xuid -> team name
 
-const colors = ["§1", "§2", "§3", "§4", "§5", "§6", "§7", "§8", "§9", "§a", "§b", "§c", "§d", "§e"]
+const colors = ["§1", "§2", "§3", "§4", "§5", "§6", "§9", "§a", "§b", "§c", "§d", "§e"]
 
 
 /////////////////////////////////////// Helpers ///////////////////////////////////////
@@ -598,16 +598,38 @@ function ShowMembers(executer, output)
 // 显示所有队伍
 function ShowAllTeams(output)
 {
-    let teams = "";
+    let teams = "\n";
     forEachTeam_Impl(teamName => {
-        teams += teamName + ", ";
+        teams += "[" + teamName + "] ";
+        forEachTeamCaptain_Impl(teamName, xuid => {
+            teams += data.xuid2name(xuid) + ", ";
+        })
+        forEachTeamMember_Impl(teamName, xuid => {
+            teams += data.xuid2name(xuid) + ", "
+        });
+        teams = teams.substring(0, teams.length - 2);
+        teams += "\n";
     });
-    teams = teams.substring(0, teams.length - 2);
+    teams = teams.substring(0, teams.length - 1);
 
     if(teams != "")
         return output.success(`[SimpleTeam] 目前所有的队伍为： ${teams}`);
     else
         return output.success(`[SimpleTeam] 目前没有任何队伍`);
+}
+
+// 显示帮助
+function ShowHelp(output)
+{
+    output.addMessage("SimpleTeam： 简单的组队插件，有编队名字变色、队内伤害阻止等特性");
+    output.addMessage("用法： /team create <名字>  创建队伍");
+    output.addMessage("       /team delete         解散队伍");
+    output.addMessage("       /team add <玩家>     邀请玩家加入队伍");
+    output.addMessage("       /team remove <玩家>  将玩家移出队伍");
+    output.addMessage("       /team removeall      将当前队伍中所有其他人移出");
+    output.addMessage("       /team list           显示当前队伍中所有玩家");
+    output.addMessage("       /team showall        显示当前所有的队伍");
+    output.addMessage("       [注] 涉及到更改队伍和队伍成员的命令仅OP玩家可用");
 }
 
 // 命令回调
@@ -621,18 +643,18 @@ function cmdCallback(_cmd, ori, out, res)
             switch (res.action) {
                 case "create":
                     if(!ori.player.isOP())
-                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+                        return out.error("[SimpleTeam] 你无权执行此命令");
                     createTeam(ori.player, res.name, out);
                     break;
                 case "delete":
                     if(!ori.player.isOP())
-                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+                        return out.error("[SimpleTeam] 你无权执行此命令");
                     deleteTeam(ori.player, out);
                     break;
                 case "add":
                     {
                         if(!ori.player.isOP())
-                            return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+                            return out.error("[SimpleTeam] 你无权执行此命令");
 
                         targets = res.player;
                         if(targets.length == 1 && targets[0].xuid == ori.player.xuid)      
@@ -651,7 +673,7 @@ function cmdCallback(_cmd, ori, out, res)
                 case "remove":
                     {
                         if(!ori.player.isOP())
-                            return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+                            return out.error("[SimpleTeam] 你无权执行此命令");
 
                         targets = res.player;
                         if(targets.length > 1)                  // 如果使用选择器，移除自己。特殊情况：remove自己
@@ -665,7 +687,7 @@ function cmdCallback(_cmd, ori, out, res)
                     break;
                 case "removeall":
                     if(!ori.player.isOP())
-                        return out.error("[SimpleTeam] 你无权执行此命令，请询问管理员");
+                        return out.error("[SimpleTeam] 你无权执行此命令");
                     removeAllMembers(ori.player, out);
                     break;
                 case "list":
@@ -674,25 +696,13 @@ function cmdCallback(_cmd, ori, out, res)
                 case "showall":
                     ShowAllTeams(out);
                     break;
+                case "help":
+                    ShowHelp(out);
+                    break;
             }
         // } catch(err) {
         //     out.error(err + "");
         // }
-
-        // debug
-        // forEachTeam_Impl(team => {
-        //     msg = "[" + team + "]\nCaptains:";
-        //     forEachTeamCaptain_Impl(team, xuid => {
-        //         msg += data.xuid2name(xuid) + ", "
-        //     });
-        //     msg = msg.substring(0, msg.length - 2);
-        //     msg +="\nMembers:";
-        //     forEachTeamMember_Impl(team, xuid => {
-        //         msg += data.xuid2name(xuid) + ", "
-        //     });
-        //     msg = msg.substring(0, msg.length - 2);
-        //     ori.player.tell(msg);
-        // });
     }
     return true;
 }
@@ -702,14 +712,18 @@ function registerCmd()
 {
     let teamCmd = mc.newCommand("team", "SimpleTeam plugin", PermType.Any, 0x80);
     teamCmd.setEnum("CreateAction", ["create"]);
-    teamCmd.setEnum("DeleteAction", ["delete", "removeall"]);
+    teamCmd.setEnum("DeleteAction", ["delete"]);
     teamCmd.setEnum("MemberAction", ["add", "remove"])
+    teamCmd.setEnum("RemoveAllAction", ["removeall"])
     teamCmd.setEnum("ListAction", ["list", "showall"])
+    teamCmd.setEnum("HelpAction", ["help"])
 
     teamCmd.mandatory("action", ParamType.Enum, "CreateAction", "action1", 1);
     teamCmd.mandatory("action", ParamType.Enum, "DeleteAction", "action2", 1);
     teamCmd.mandatory("action", ParamType.Enum, "MemberAction", "action3", 1);
     teamCmd.mandatory("action", ParamType.Enum, "ListAction", "action4", 1)
+    teamCmd.mandatory("action", ParamType.Enum, "RemoveAllAction", "action5", 1)
+    teamCmd.mandatory("action", ParamType.Enum, "HelpAction", "action6", 1)
     teamCmd.mandatory("name", ParamType.String);
     teamCmd.mandatory("player", ParamType.Player);
 
@@ -717,6 +731,8 @@ function registerCmd()
     teamCmd.overload(["DeleteAction"]);
     teamCmd.overload(["MemberAction", "player"]);
     teamCmd.overload(["ListAction"]);
+    teamCmd.overload(["RemoveAllAction"]);
+    teamCmd.overload(["HelpAction"]);
 
     teamCmd.setCallback(cmdCallback);
     teamCmd.setup();
@@ -777,7 +793,7 @@ function main()
 {
     readFromFile();
     logger.info("SimpleTeam 已加载，开发者：yqs112358");
-    logger.info("简单的组队游戏插件，有编队名字变色、队内伤害阻止等特性");
+    logger.info("简单的组队插件，有编队名字变色、队内伤害阻止等特性");
     logger.info("用法： /team create <名字>  创建队伍");
     logger.info("       /team delete         解散队伍");
     logger.info("       /team add <玩家>     邀请玩家加入队伍");
@@ -785,7 +801,7 @@ function main()
     logger.info("       /team removeall      将当前队伍中所有其他人移出");
     logger.info("       /team list           显示当前队伍中所有玩家");
     logger.info("       /team showall        显示当前所有的队伍");
-    logger.info("       [注] 命令仅OP玩家可用");
+    logger.info("       [注] 涉及到更改队伍和队伍成员的命令仅OP玩家可用");
 
     // 命令注册
     mc.listen("onServerStarted", () => {
