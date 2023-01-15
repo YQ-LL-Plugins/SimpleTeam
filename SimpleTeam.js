@@ -275,24 +275,34 @@ function deleteTeam(executer, output)
     if(teamName)
     {
         // 队伍存在
-        forEachTeamCaptain_Impl(teamName, xuid => {
-            let pl = mc.getPlayer(xuid);
-            if(pl)
+        executer.sendModalForm("SimpleTeam 队伍解散确认",`你确定要解散队伍${teamName}吗？`
+            ,"确定", "取消", function(teamName) 
+        {
+            return (player, result) =>
             {
-                recoverPlayerName(pl);
-                pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
+                if(result)
+                {
+                    forEachTeamCaptain_Impl(teamName, xuid => {
+                        let pl = mc.getPlayer(xuid);
+                        if(pl)
+                        {
+                            recoverPlayerName(pl);
+                            pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
+                        }
+                    });
+                    forEachTeamMember_Impl(teamName, xuid => {
+                        let pl = mc.getPlayer(xuid);
+                        if(pl)
+                        {
+                            recoverPlayerName(pl);
+                            pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
+                        }
+                    });
+                    deleteTeam_Impl(teamName);
+                    player.tell("[SimpleTeam] 队伍删除成功");
+                }
             }
-        });
-        forEachTeamMember_Impl(teamName, xuid => {
-            let pl = mc.getPlayer(xuid);
-            if(pl)
-            {
-                recoverPlayerName(pl);
-                pl.tell(`[SimpleTeam] 队伍${teamName}已解散`)
-            }
-        });
-        deleteTeam_Impl(teamName);
-        return output.success("[SimpleTeam] 队伍删除成功");
+        }(teamName));
     }
     else
         return output.error("[SimpleTeam] 你不在任何队伍中，无法执行解散\n[SimpleTeam] 请先使用/team create <name> 创建一个队伍");
@@ -676,7 +686,7 @@ function main()
     logger.info("       /team removeall      将当前队伍中所有其他人移出");
     logger.info("       /team list           显示当前队伍中所有玩家");
     logger.info("       /team showall        显示当前所有的队伍");
-    logger.info("[注] 命令仅OP玩家可用");
+    logger.info("       [注] 命令仅OP玩家可用");
 
     // 命令注册
     mc.listen("onServerStarted", () => {
