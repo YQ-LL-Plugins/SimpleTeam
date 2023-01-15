@@ -449,8 +449,8 @@ function addMember(executer, playerAdd, output)
 // 移除队伍成员
 function removeMember(executer, playerRemove, output)
 {
-    if(executer.xuid == playerRemove.xuid)
-        return output.error("[SimpleTeam] 无法将自己移出队伍。\n[SimpleTeam] 是否想用/team delete 解散队伍？");
+    // if(executer.xuid == playerRemove.xuid)
+    //     return output.error("[SimpleTeam] 无法将自己移出队伍。\n[SimpleTeam] 是否想用/team delete 解散队伍？");
 
     let executerTeam = getPlayerTeam_Impl(executer.xuid);
     if(executerTeam == null)
@@ -462,13 +462,77 @@ function removeMember(executer, playerRemove, output)
         return output.error(`[SimpleTeam] 移除失败，玩家${playerRemove.name}不在此队伍中`);
 
     // 可以移除
-    playerRemove.tell(`[SimpleTeam] 你已被移出队伍${executerTeam}`)
-    removeMember_Impl(playerXuid, playerRemove.isOP(), executerTeam);
+    if(executer.xuid == playerRemove.xuid)
+    {
+        // 尝试移除自己
+        if(countTeamCaptains_Impl(playerOldTeam) == 1)
+        {
+            // 自己是最后一位captain，如果remove则当前队伍解散
+            executer.sendModalForm("SimpleTeam 成员移除确认",`你正在将自己移出队伍${executerTeam}\n如果确认移除，你现在的队伍将被解散。确认移除吗？`
+                ,"确认", "取消", function(playerOldTeam) 
+                {
+                    return (executer, result) =>
+                    {
+                        if(result)
+                        {
+                            // 同意
+                            // 向旧队员发消息
+                            forEachTeamMember_Impl(playerOldTeam, xuid => {
+                                let pl = mc.getPlayer(xuid);
+                                if(pl)
+                                {
+                                    recoverPlayerName(pl);
+                                    pl.tell(`[SimpleTeam] 队伍${playerOldTeam}已解散`);
+                                }
+                            });
 
-    recoverPlayerName(playerRemove);
-    let cnt = countTeamMembers_Impl(executerTeam) + countTeamCaptains_Impl(executerTeam);
-    return output.success(`[SimpleTeam] 移除成功\n[SimpleTeam] 现在队伍剩余${cnt}人`);
-}
+                            // 解散队伍
+                            deleteTeam_Impl(playerOldTeam);
+                        }
+                    }
+                }(executerTeam));
+        }
+        else
+        {
+            // 不是最后一位captain，正常移除
+            executer.sendModalForm("SimpleTeam 成员移除确认",`你正在将自己移出队伍${executerTeam}。确认移除吗？`
+                ,"确认", "取消", function(playerOldTeam) 
+            {
+                return (executer, result) =>
+                {
+                    if(result)
+                    {
+                        // 同意
+                        let playerXuid = executer.xuid;
+                        // 提醒旧队队长
+                        forEachTeamCaptain_Impl(playerOldTeam, xuid => {
+                            let pl = mc.getPlayer(xuid);
+                            if(pl && pl.xuid != executer.xuid)
+                                pl.tell(`[SimpleTeam] 玩家${executer.name}已将自己移出队伍${playerOldTeam}`);
+                        });
+                        
+                        // 移除
+                        removeMember_Impl(playerXuid, true, playerOldTeam);
+
+                        // 发送结果
+                        recoverPlayerName(playerXuid);
+                        executer.tell(`[SimpleTeam] 你已离开队伍${playerOldTeam}`);                    
+                    }
+                }
+            }(executerTeam));
+        }
+    }
+    else
+    {
+        // 移除别人
+        playerRemove.tell(`[SimpleTeam] 你已被移出队伍${executerTeam}`);
+        removeMember_Impl(playerXuid, playerRemove.isOP(), executerTeam);
+
+        recoverPlayerName(playerRemove);
+        let cnt = countTeamMembers_Impl(executerTeam) + countTeamCaptains_Impl(executerTeam);
+        return output.success(`[SimpleTeam] 移除成功\n[SimpleTeam] 现在队伍剩余${cnt}人`);
+    }
+} 
 
 // 移除所有队伍成员
 function removeAllMembers(executer, output)
@@ -562,7 +626,12 @@ function cmdCallback(_cmd, ori, out, res)
                     break;
                 case "add":
                     targets = res.player;
-					targets.removeByValue(ori.player);
+                    if(targets.length == 1 && targets[0].xuid == ori.player.xuid)      
+                    {
+					    // 如果add自己，则报错
+                        return output.error("[SimpleTeam] 无法添加到队伍，因为你已经在此队伍中");
+                    }
+                    targets.removeByValue(ori.player);      // 如果使用选择器，移除自己
                     if(targets.length == 0)
                         return out.error("[SimpleTeam] 目标玩家不存在！");
 					for(var target of targets)
@@ -570,7 +639,8 @@ function cmdCallback(_cmd, ori, out, res)
                     break;
                 case "remove":
                     targets = res.player;
-					targets.removeByValue(ori.player);
+                    if(targets.length > 1)                  // 如果使用选择器，移除自己。特殊情况：remove自己
+					    targets.removeByValue(ori.player);
                     if(targets.length == 0)
                         return out.error("[SimpleTeam] 目标玩家不存在！");
 					for(var target of targets)
