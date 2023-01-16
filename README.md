@@ -46,7 +46,7 @@
 
 ## Config file
 
-At `plugins/SimpleTeam/config.ini`, with comments in file
+位于 `plugins/SimpleTeam/config.ini`，文件中有注释说明
 
 ```ini
 [BanHurtTeammates]
@@ -57,6 +57,6 @@ enabled=1
 ; 聊天仅队内可见
 enabled=1
 ; 广播聊天前缀
-BroadcastChatPrefix=#
+broadcastChatPrefix=#
 ```
 
