@@ -5,7 +5,7 @@ let teamsMap = new Map();           // team name -> {captains: [], members: []}
 let playerTeamMap = new Map();      // xuid -> team name
 
 const colors = ["§1", "§2", "§3", "§4", "§5", "§6", "§9", "§a", "§b", "§c", "§d", "§e"]
-
+let broadcastChatPrefix = "#";
 
 /////////////////////////////////////// Helpers ///////////////////////////////////////
 
@@ -43,14 +43,14 @@ function objToMap(obj){
 /////////////////////////////////////// 持久化 ///////////////////////////////////////
 
 // 保存
-function saveToFile()
+function saveDataToFile()
 {
     File.writeTo("./plugins/SimpleTeam/TeamsMap.json", JSON.stringify(mapToObj(teamsMap)));
     File.writeTo("./plugins/SimpleTeam/PlayerTeamMap.json", JSON.stringify(mapToObj(playerTeamMap)));
 }
 
 // 解析
-function readFromFile()
+function loadDataFromFile()
 {
     try{
         if(File.exists("./plugins/SimpleTeam/TeamsMap.json"))
@@ -79,7 +79,7 @@ function newTeam_Impl(creatorXuid, teamName)
     {
         teamsMap.set(teamName, {captains: [creatorXuid], members: []});  
         playerTeamMap.set(creatorXuid, teamName);
-        saveToFile();
+        saveDataToFile();
         return true;
     }
     else
@@ -99,7 +99,7 @@ function deleteTeam_Impl(teamName)
             playerTeamMap.set(xuid, null);
         });
         teamsMap.delete(teamName);
-        saveToFile();
+        saveDataToFile();
         return true;
     }
     else return null;
@@ -181,7 +181,7 @@ function addMember_Impl(playerXuid, isOP, teamName)
     else
         teamInfo.members.push(playerXuid);
     playerTeamMap.set(playerXuid, teamName);
-    saveToFile();
+    saveDataToFile();
 }
 
 // 队伍移除成员
@@ -210,7 +210,7 @@ function removeMember_Impl(playerXuid, isOP, teamName)
         teamInfo.members.removeByValue(playerXuid);
     }
     playerTeamMap.set(playerXuid, null);
-    saveToFile();
+    saveDataToFile();
 }
 
 // 队伍转移成员
@@ -757,7 +757,7 @@ function playerLeft(player)
 // 玩家聊天
 function playerChat(player, msg)
 {
-    if(msg.length > 0 && msg[0] == "#")
+    if(!msg.startsWith(broadcastChatPrefix))
         return true;
 
     let teamName = getPlayerTeam_Impl(player.xuid);
@@ -768,7 +768,7 @@ function playerChat(player, msg)
             let pl = mc.getPlayer(xuid);
             if(pl)
                 pl.tell("<队内 " + player.realName + "> " + msg);
-        });wr
+        });
         forEachTeamMember_Impl(teamName, xuid => {
             let pl = mc.getPlayer(xuid);
             if(pl)
@@ -818,7 +818,7 @@ function entityHurt(mob,source,damage,cause){
 // main
 function main()
 {
-    readFromFile();
+    loadDataFromFile();
     logger.info(`SimpleTeam ${_VER} 已加载，开发者：yqs112358`);
     logger.info("简单的组队插件，有编队名字变色、队内伤害阻止、队内聊天等特性");
     logger.info("用法： /team create <名字>  创建队伍");
@@ -838,9 +838,21 @@ function main()
     // 监听玩家行为
     mc.listen("onJoin", playerJoin);
     mc.listen("onLeft", playerLeft);
-    mc.listen("onAttackEntity", playerAttack);
-    mc.listen("onMobHurt", entityHurt);
-    mc.listen("onChat", playerChat);
+
+    // features
+    let conf = new IniConfigFile("./plugins/SimpleTeam/config.ini");
+    // 队内伤害阻止
+    if(conf.init("BanHurtTeammates", "enabled", 1))
+    {
+        mc.listen("onAttackEntity", playerAttack);
+        mc.listen("onMobHurt", entityHurt);
+    }
+    // 聊天仅队内可见
+    if(conf.init("ChatOnlyInTeam", "enabled", 1))
+    {
+        mc.listen("onChat", playerChat);
+        broadcastChatPrefix = conf.init("ChatOnlyInTeam", "broadcastChatPrefix", "#");
+    }
 }
 
 main();
