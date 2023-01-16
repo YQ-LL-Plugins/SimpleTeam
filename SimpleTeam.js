@@ -623,7 +623,7 @@ function ShowAllTeams(output)
 // 显示帮助
 function ShowHelp(output)
 {
-    output.addMessage("SimpleTeam： 简单的组队插件，有编队名字变色、队内伤害阻止等特性");
+    output.addMessage("SimpleTeam： 简单的组队插件，有编队名字变色、队内伤害阻止、队内聊天等特性");
     output.addMessage("用法： /team create <名字>  创建队伍");
     output.addMessage("       /team delete         解散队伍");
     output.addMessage("       /team add <玩家>     邀请玩家加入队伍");
@@ -754,6 +754,31 @@ function playerLeft(player)
     playerOffline_Impl(player.xuid);
 }
 
+// 玩家聊天
+function playerChat(player, msg)
+{
+    if(msg.length > 0 && msg[0] == "#")
+        return true;
+
+    let teamName = getPlayerTeam_Impl(player.xuid);
+    if(teamName != null)
+    {
+        // 仅队内转发消息
+        forEachTeamCaptain_Impl(teamName, xuid => {
+            let pl = mc.getPlayer(xuid);
+            if(pl)
+                pl.tell("<队内 " + player.realName + "> " + msg);
+        });wr
+        forEachTeamMember_Impl(teamName, xuid => {
+            let pl = mc.getPlayer(xuid);
+            if(pl)
+                pl.tell("<队内 " + player.realName + "> " + msg);
+        });
+        return false;
+    }
+    else return true;
+}
+
 // 玩家攻击实体
 function playerAttack(attacker, entity)
 {
@@ -795,7 +820,7 @@ function main()
 {
     readFromFile();
     logger.info(`SimpleTeam ${_VER} 已加载，开发者：yqs112358`);
-    logger.info("简单的组队插件，有编队名字变色、队内伤害阻止等特性");
+    logger.info("简单的组队插件，有编队名字变色、队内伤害阻止、队内聊天等特性");
     logger.info("用法： /team create <名字>  创建队伍");
     logger.info("       /team delete         解散队伍");
     logger.info("       /team add <玩家>     邀请玩家加入队伍");
@@ -815,6 +840,7 @@ function main()
     mc.listen("onLeft", playerLeft);
     mc.listen("onAttackEntity", playerAttack);
     mc.listen("onMobHurt", entityHurt);
+    mc.listen("onChat", playerChat);
 }
 
 main();
