@@ -641,7 +641,7 @@ function cmdCallback(_cmd, ori, out, res)
     {
         // try
         // {
-            let target = null;
+            let targets = null;
             switch (res.action) {
                 case "create":
                     if(!ori.player.isOP())
